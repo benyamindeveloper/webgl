@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Unity Web Player | Client05</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+  
+<!-- METARANG_DEFAULT_WEBGL_MOBILE_LANDSCAPE_V2 -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+
+<style id="metarang-mobile-landscape-v2-style">
+html,
+body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  background: #000;
+}
+
+/*
+  مهم:
+  قالب Default یونیتی روی دسکتاپ container را با
+  left:50%, top:50%, transform:translate(-50%,-50%)
+  وسط می‌برد.
+  وقتی container را تمام صفحه می‌کنیم باید transform قبلی
+  حتماً صفر شود، وگرنه نصف صفحه از viewport بیرون می‌رود.
+*/
+#unity-container,
+#unity-container.unity-desktop,
+#unity-container.unity-mobile {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  inset: 0 !important;
+  transform: none !important;
+  margin: 0 !important;
+
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+
+  max-width: none !important;
+  max-height: none !important;
+  overflow: hidden !important;
+  background: #000 !important;
+}
+
+#unity-canvas,
+#unity-container.unity-desktop #unity-canvas,
+#unity-container.unity-mobile #unity-canvas {
+  display: block !important;
+
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+
+  max-width: none !important;
+  max-height: none !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+  outline: none !important;
+}
+
+/* Footer و دکمه Fullscreen پیش‌فرض یونیتی دیگر فضای صفحه را نمی‌گیرند. */
+#unity-footer {
+  display: none !important;
+}
+
+/* دکمه ورود اولیه موبایل */
+#metarang-mobile-entry {
+  position: fixed;
+  z-index: 2147483647;
+  inset: 0;
+
+  display: none;
+  align-items: center;
+  justify-content: center;
+
+  padding: 24px;
+  box-sizing: border-box;
+
+  background: #000;
+  color: #fff;
+
+  font-family: Tahoma, Arial, sans-serif;
+  text-align: center;
+}
+
+#metarang-mobile-entry .metarang-card {
+  width: min(90vw, 420px);
+}
+
+#metarang-mobile-entry button,
+#metarang-orientation-warning button {
+  width: 100%;
+  min-height: 58px;
+
+  border: 0;
+  border-radius: 12px;
+
+  background: #fff;
+  color: #111;
+
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#metarang-mobile-entry .metarang-hint {
+  margin-top: 14px;
+  opacity: .78;
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+/* صفحه راهنمای حالت عمودی */
+#metarang-orientation-warning {
+  position: fixed;
+  z-index: 2147483646;
+  inset: 0;
+
+  display: none;
+  align-items: center;
+  justify-content: center;
+
+  padding: 24px;
+  box-sizing: border-box;
+
+  background: #111;
+  color: #fff;
+
+  font-family: Tahoma, Arial, sans-serif;
+  text-align: center;
+  font-size: 18px;
+  line-height: 1.9;
+}
+
+#metarang-orientation-warning .metarang-card {
+  width: min(90vw, 420px);
+}
+
+#metarang-orientation-warning button {
+  margin-top: 18px;
+}
+
+/*
+  اگر بعد از چرخش گوشی مرورگر از Fullscreen خارج شود،
+  بازی دوباره نمایش داده می‌شود و این دکمه کوچک برای ورود مجدد
+  به Fullscreen ظاهر می‌شود.
+*/
+#metarang-fullscreen-reopen {
+  position: fixed;
+  z-index: 2147483645;
+
+  right: 12px;
+  bottom: 12px;
+
+  display: none;
+
+  min-width: 118px;
+  min-height: 44px;
+
+  padding: 8px 14px;
+
+  border: 0;
+  border-radius: 10px;
+
+  background: rgba(0, 0, 0, .78);
+  color: #fff;
+
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+</style>
+
+</head>
+  <body>
+
+<div id="metarang-mobile-entry">
+  <div class="metarang-card">
+    <button id="metarang-enter-game" type="button">
+      ورود تمام‌صفحه به بازی
+    </button>
+
+    <div class="metarang-hint">
+      با ورود به بازی، مرورگر تمام‌صفحه می‌شود و حالت افقی فعال می‌شود.
+    </div>
+  </div>
+</div>
+
+<div id="metarang-orientation-warning">
+  <div class="metarang-card">
+    <div>
+      این بازی برای حالت افقی طراحی شده است.<br>
+      گوشی را افقی کنید.
+    </div>
+
+    <button id="metarang-orientation-fullscreen" type="button">
+      بازگشت تمام‌صفحه
+    </button>
+  </div>
+</div>
+
+<button id="metarang-fullscreen-reopen" type="button">
+  تمام‌صفحه
+</button>
+
+
+    <div id="unity-container" class="unity-desktop">
+      <canvas id="unity-canvas" width=1280 height=720 tabindex="-1"></canvas>
+      <div id="unity-loading-bar">
+        <div id="unity-logo"></div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
+        </div>
+      </div>
+      <div id="unity-warning"> </div>
+      <div id="unity-footer">
+        <div id="unity-logo-title-footer"></div>
+        <div id="unity-fullscreen-button"></div>
+        <div id="unity-build-title">Client05</div>
+      </div>
+    </div>
+    <script>
+      var canvas = document.querySelector("#unity-canvas");
+
+      // Shows a temporary message banner/ribbon for a few seconds, or
+      // a permanent error message on top of the canvas if type=='error'.
+      // If type=='warning', a yellow highlight color is used.
+      // Modify or remove this function to customize the visually presented
+      // way that non-critical warnings and error messages are presented to the
+      // user.
+      function unityShowBanner(msg, type) {
+        var warningBanner = document.querySelector("#unity-warning");
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        }
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+        updateBannerVisibility();
+      }
+
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/26a11720aca52eee9194dc09098192e2.loader.js";
+      var config = {
+        arguments: [],
+        dataUrl: buildUrl + "/75b426fb72867c25e9952b59c25eb118.data.br",
+        frameworkUrl: buildUrl + "/8d2248f7b81d4397e3efed586c89ce4c.framework.js.br",
+        codeUrl: buildUrl + "/087299aa6f080079b306222e7e220ffe.wasm.br",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "MetaRGB",
+        productName: "Client05",
+        productVersion: "0.1.0",
+        showBanner: unityShowBanner,
+        // errorHandler: function(err, url, line) {
+        //    alert("error " + err + " occurred at line " + line);
+        //    // Return 'true' if you handled this error and don't want Unity
+        //    // to process it further, 'false' otherwise.
+        //    return true;
+        // },
+      };
+
+      // By default, Unity keeps WebGL canvas render target size matched with
+      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
+      // Set this to false if you want to decouple this synchronization from
+      // happening inside the engine, and you would instead like to size up
+      // the canvas DOM size and WebGL render target sizes yourself.
+      // config.matchWebGLToCanvasSize = false;
+
+      // If you would like all file writes inside Unity Application.persistentDataPath
+      // directory to automatically persist so that the contents are remembered when
+      // the user revisits the site the next time, uncomment the following line:
+      // config.autoSyncPersistentDataPath = true;
+      // This autosyncing is currently not the default behavior to avoid regressing
+      // existing user projects that might rely on the earlier manual
+      // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
+      // expected to change.
+
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // Mobile device style: fill the whole browser client area with the game canvas:
+
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.getElementsByTagName('head')[0].appendChild(meta);
+        document.querySelector("#unity-container").className = "unity-mobile";
+        canvas.className = "unity-mobile";
+
+        // To lower canvas resolution on mobile devices to gain some
+        // performance, uncomment the following line:
+        // config.devicePixelRatio = 1;
+
+
+      } else {
+        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+        canvas.style.width = "1280px";
+        canvas.style.height = "720px";
+      }
+
+      canvas.style.background = "url('" + buildUrl + "/437882c3e768fe2f8451822014de105b.jpg') center / cover";
+      document.querySelector("#unity-loading-bar").style.display = "block";
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+          document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
+              }).then((unityInstance) => {
+                document.querySelector("#unity-loading-bar").style.display = "none";
+                document.querySelector("#unity-fullscreen-button").onclick = () => {
+                  unityInstance.SetFullscreen(1);
+                };
+
+              }).catch((message) => {
+                alert(message);
+              });
+            };
+
+      document.body.appendChild(script);
+
+    </script>
+  
+<script id="metarang-mobile-landscape-v2-script">
+(function () {
+  "use strict";
+
+  var mobileEntry =
+    document.getElementById("metarang-mobile-entry");
+
+  var enterButton =
+    document.getElementById("metarang-enter-game");
+
+  var orientationWarning =
+    document.getElementById("metarang-orientation-warning");
+
+  var orientationFullscreenButton =
+    document.getElementById("metarang-orientation-fullscreen");
+
+  var fullscreenReopenButton =
+    document.getElementById("metarang-fullscreen-reopen");
+
+  var unityContainer =
+    document.getElementById("unity-container");
+
+  var unityCanvas =
+    document.getElementById("unity-canvas");
+
+  var isMobile =
+    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
+    (
+      navigator.maxTouchPoints > 1 &&
+      Math.min(screen.width || 0, screen.height || 0) < 1100
+    );
+
+  var entryCompleted = false;
+
+  function isFullscreen() {
+    return !!(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement
+    );
+  }
+
+  function isLandscape() {
+    return window.innerWidth > window.innerHeight;
+  }
+
+  function updateViewport() {
+    var h =
+      (window.visualViewport && window.visualViewport.height) ||
+      window.innerHeight ||
+      document.documentElement.clientHeight;
+
+    var w =
+      (window.visualViewport && window.visualViewport.width) ||
+      window.innerWidth ||
+      document.documentElement.clientWidth;
+
+    if (unityContainer) {
+      unityContainer.style.left = "0px";
+      unityContainer.style.top = "0px";
+      unityContainer.style.transform = "none";
+
+      if (w > 0)
+        unityContainer.style.width = w + "px";
+
+      if (h > 0)
+        unityContainer.style.height = h + "px";
+    }
+
+    if (unityCanvas) {
+      if (w > 0)
+        unityCanvas.style.width = w + "px";
+
+      if (h > 0)
+        unityCanvas.style.height = h + "px";
+    }
+  }
+
+  function refreshMobileUi() {
+    if (!isMobile) {
+      mobileEntry.style.display = "none";
+      orientationWarning.style.display = "none";
+      fullscreenReopenButton.style.display = "none";
+      return;
+    }
+
+    if (!entryCompleted) {
+      mobileEntry.style.display = "flex";
+      orientationWarning.style.display = "none";
+      fullscreenReopenButton.style.display = "none";
+      return;
+    }
+
+    mobileEntry.style.display = "none";
+
+    if (!isLandscape()) {
+      orientationWarning.style.display = "flex";
+      fullscreenReopenButton.style.display = "none";
+      return;
+    }
+
+    /*
+      مهم:
+      به محض اینکه کاربر گوشی را دوباره افقی کند،
+      Overlay عمودی خودکار حذف می‌شود و خود بازی دوباره دیده می‌شود.
+    */
+    orientationWarning.style.display = "none";
+
+    /*
+      بعضی مرورگرها هنگام چرخش از Fullscreen خارج می‌شوند.
+      Fullscreen دوباره بدون gesture قابل اجبار نیست؛
+      بنابراین خود بازی نمایش داده می‌شود و فقط یک دکمه کوچک
+      برای بازگشت به Fullscreen نشان داده می‌شود.
+    */
+    fullscreenReopenButton.style.display =
+      isFullscreen() ? "none" : "block";
+  }
+
+  async function requestFullscreenNow() {
+    var root = document.documentElement;
+
+    if (isFullscreen())
+      return true;
+
+    try {
+      if (root.requestFullscreen) {
+        await root.requestFullscreen({
+          navigationUI: "hide"
+        });
+
+        return true;
+      }
+
+      if (root.webkitRequestFullscreen) {
+        root.webkitRequestFullscreen();
+        return true;
+      }
+    } catch (error) {
+      console.warn(
+        "[MetaRang] Fullscreen request rejected:",
+        error
+      );
+    }
+
+    return false;
+  }
+
+  async function lockLandscapeNow() {
+    try {
+      if (screen.orientation && screen.orientation.lock) {
+        try {
+          await screen.orientation.lock("landscape-primary");
+          return true;
+        } catch (_) {
+          await screen.orientation.lock("landscape");
+          return true;
+        }
+      }
+    } catch (error) {
+      console.warn(
+        "[MetaRang] Landscape lock rejected:",
+        error
+      );
+    }
+
+    return false;
+  }
+
+  async function requestFullscreenAndLandscape() {
+    var fullscreenOk = await requestFullscreenNow();
+
+    var landscapeOk =
+      await lockLandscapeNow();
+
+    if (!landscapeOk && fullscreenOk) {
+      await new Promise(function (resolve) {
+        setTimeout(resolve, 120);
+      });
+
+      await lockLandscapeNow();
+    }
+
+    updateViewport();
+    refreshMobileUi();
+  }
+
+  async function enterGame() {
+    enterButton.disabled = true;
+
+    await requestFullscreenAndLandscape();
+
+    entryCompleted = true;
+
+    updateViewport();
+    refreshMobileUi();
+  }
+
+  async function reopenFullscreen() {
+    await requestFullscreenAndLandscape();
+
+    updateViewport();
+    refreshMobileUi();
+  }
+
+  async function handleFullscreenChange() {
+    if (
+      isMobile &&
+      entryCompleted &&
+      isFullscreen() &&
+      isLandscape()
+    ) {
+      await lockLandscapeNow();
+    }
+
+    updateViewport();
+    refreshMobileUi();
+  }
+
+  function handleOrientationOrResize() {
+    /*
+      مرورگرهای موبایل viewport را طی چند فریم عوض می‌کنند.
+      دو مرحله refresh می‌کنیم تا Overlay در landscape گیر نکند.
+    */
+    updateViewport();
+    refreshMobileUi();
+
+    setTimeout(function () {
+      updateViewport();
+      refreshMobileUi();
+    }, 120);
+
+    setTimeout(function () {
+      updateViewport();
+      refreshMobileUi();
+    }, 420);
+  }
+
+  enterButton.addEventListener(
+    "click",
+    enterGame,
+    { once: true }
+  );
+
+  orientationFullscreenButton.addEventListener(
+    "click",
+    reopenFullscreen
+  );
+
+  fullscreenReopenButton.addEventListener(
+    "click",
+    reopenFullscreen
+  );
+
+  document.addEventListener(
+    "fullscreenchange",
+    handleFullscreenChange
+  );
+
+  document.addEventListener(
+    "webkitfullscreenchange",
+    handleFullscreenChange
+  );
+
+  window.addEventListener(
+    "resize",
+    handleOrientationOrResize
+  );
+
+  window.addEventListener(
+    "orientationchange",
+    handleOrientationOrResize
+  );
+
+  window.addEventListener(
+    "pageshow",
+    handleOrientationOrResize
+  );
+
+  document.addEventListener(
+    "visibilitychange",
+    function () {
+      if (!document.hidden)
+        handleOrientationOrResize();
+    }
+  );
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener(
+      "resize",
+      handleOrientationOrResize
+    );
+  }
+
+  updateViewport();
+
+  if (isMobile)
+    mobileEntry.style.display = "flex";
+
+  refreshMobileUi();
+
+  window.MetaRangEnterMobileGame =
+    enterGame;
+
+  window.MetaRangRefreshMobileLayout =
+    handleOrientationOrResize;
+})();
+</script>
+
+</body>
+</html>
